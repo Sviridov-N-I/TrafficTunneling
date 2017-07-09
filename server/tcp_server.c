@@ -18,6 +18,9 @@
 #define CURRENT_VERSION 1
 #define NUMBER_FIELD 3 // for query message
 
+#define T_A 1
+#define T_TXT 16
+
 char* read_dns_query_soure_name(json_t *query)
 {
     size_t size = json_array_size(query);
@@ -82,20 +85,22 @@ int main(int argc , char *argv[])
 
     json_error_t error;
     json_t* buf_json = NULL;
+    json_t* json_for_reply = NULL;
     char* buf_name;
     unsigned char hostname[50];
+    int query_type;
 
 
 
-    while( (read_size = recv(client_sock , client_message , 2000 , 0)) > 0 )
+    while( (read_size = recv(client_sock , client_message , BUL_LEN , 0)) > 0 )
     {
         buf_json = json_loads(client_message,0,&error);
         if(buf_json==NULL) {printf("JSON Error"); return -1;}
         buf_name=read_dns_query_soure_name(buf_json);
-        puts(buf_name);
+        puts(buf_name); //priintf resourse name
         strcpy(hostname,buf_name);
-        dnsquery(hostname , 1);
-
+        json_for_reply = dnsquery(hostname ,json_integer_value(json_array_get(buf_json, 1)));
+        printf("\nsize=%d\n",json_array_size(json_for_reply));
   /*      printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 0)));        printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 1)));        printf("==->%s\n", json_string_value(json_array_get(buf_json, 2)));*/
 
         write(client_sock , client_message , strlen(client_message));
