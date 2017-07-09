@@ -44,7 +44,6 @@ char* read_dns_query_soure_name(json_t *query)
 
 int main(int argc , char *argv[])
 {
-    printA();
 
     int socket_desc , client_sock , c , read_size;
     struct sockaddr_in server , client;
@@ -70,19 +69,6 @@ int main(int argc , char *argv[])
     }
     puts("bind done");
 
-    listen(socket_desc , 3);
-
-    puts("Waiting for incoming connections...");
-    c = sizeof(struct sockaddr_in);
-
-    client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
-    if (client_sock < 0)
-    {
-        perror("accept failed");
-        return -1;
-    }
-    puts("Connection accepted");
-
     json_error_t error;
     json_t* buf_json = NULL;
     json_t* jDNS_reply = NULL;
@@ -92,36 +78,69 @@ int main(int argc , char *argv[])
     char* ToChar=NULL;
 
 
+      listen(socket_desc , 3);
+      while(1)
+      {
+      puts("Waiting for incoming connections...");
+      c = sizeof(struct sockaddr_in);
 
-    while( (read_size = recv(client_sock , client_message , BUL_LEN , 0)) > 0 )
-    {
-        buf_json = json_loads(client_message,0,&error);
-        if(buf_json==NULL) {printf("JSON Error"); return -1;}
-        buf_name=read_dns_query_soure_name(buf_json);
-      //  puts(buf_name); //priintf resourse name
-        strcpy(hostname,buf_name);
-        query_type=json_integer_value(json_array_get(buf_json, 1));
-        jDNS_reply = dnsquery(hostname ,query_type);
-    //    printf("\nsize=%d\n",json_array_size(jDNS_reply));
-  /*      printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 0)));        printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 1)));        printf("==->%s\n", json_string_value(json_array_get(buf_json, 2)));*/
-    //     printf("==->%s\n", json_integer_value(json_array_get(jDNS_reply, 2)));
+      client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
+      if (client_sock < 0)
+      {
+          perror("accept failed");
+          return -1;
+      }
+      puts("Connection accepted");
 
-        ToChar=json_dumps(jDNS_reply,0);
-        strcpy(client_message,ToChar);
 
-        write(client_sock , client_message , 2000);//strlen(client_message));
+      int packet_size=-1;
 
+
+      while( (read_size = recv(client_sock , client_message , BUL_LEN , 0)) > 0 )
+      {
+        //  printf("READ_SIZE= %d\n",read_size);
+          buf_json = json_loads(client_message,0,&error);
+          if(buf_json==NULL)
+          {
+            printf("JSON Error\n");
+            close(socket_desc);
+            return -1;
+          }
+          buf_name=read_dns_query_soure_name(buf_json);
+  //        puts(buf_name); //priintf resourse name
+          strcpy(hostname,buf_name);
+          query_type=json_integer_value(json_array_get(buf_json, 1));
+          jDNS_reply = dnsquery(hostname ,query_type);
+      //    printf("\nsize=%d\n",json_array_size(jDNS_reply));
+    /*      printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 0)));        printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 1)));        printf("==->%s\n", json_string_value(json_array_get(buf_json, 2)));*/
+      //     printf("==->%s\n", json_integer_value(json_array_get(jDNS_reply, 2)));
+
+          ToChar=json_dumps(jDNS_reply,0);
+
+  //      strcpy(client_message,"");
+          strcpy(client_message,ToChar);
+
+          write(client_sock , client_message , BUL_LEN);//strlen(client_message));
+          free(buf_json);
+          strcpy(client_message,"");
+          strcpy(hostname,"");
+          for(int it=0;it<BUL_LEN;it++){
+              client_message[it]='\0';
+            }
+      }
+
+      if(read_size == 0)
+      {
+          puts("Client disconnected");
+      //    fflush(stdout);
+      }
+      else if(read_size == -1)
+      {
+          perror("recv failed");
+      }
     }
+    close(socket_desc);
 
-    if(read_size == 0)
-    {
-        puts("Client disconnected");
-        fflush(stdout);
-    }
-    else if(read_size == -1)
-    {
-        perror("recv failed");
-    }
 
     return 0;
 }
