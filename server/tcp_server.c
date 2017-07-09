@@ -85,10 +85,11 @@ int main(int argc , char *argv[])
 
     json_error_t error;
     json_t* buf_json = NULL;
-    json_t* json_for_reply = NULL;
+    json_t* jDNS_reply = NULL;
     char* buf_name;
     unsigned char hostname[50];
     int query_type;
+    char* ToChar=NULL;
 
 
 
@@ -97,13 +98,18 @@ int main(int argc , char *argv[])
         buf_json = json_loads(client_message,0,&error);
         if(buf_json==NULL) {printf("JSON Error"); return -1;}
         buf_name=read_dns_query_soure_name(buf_json);
-        puts(buf_name); //priintf resourse name
+      //  puts(buf_name); //priintf resourse name
         strcpy(hostname,buf_name);
-        json_for_reply = dnsquery(hostname ,json_integer_value(json_array_get(buf_json, 1)));
-        printf("\nsize=%d\n",json_array_size(json_for_reply));
+        query_type=json_integer_value(json_array_get(buf_json, 1));
+        jDNS_reply = dnsquery(hostname ,query_type);
+    //    printf("\nsize=%d\n",json_array_size(jDNS_reply));
   /*      printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 0)));        printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 1)));        printf("==->%s\n", json_string_value(json_array_get(buf_json, 2)));*/
+    //     printf("==->%s\n", json_integer_value(json_array_get(jDNS_reply, 2)));
 
-        write(client_sock , client_message , strlen(client_message));
+        ToChar=json_dumps(jDNS_reply,0);
+        strcpy(client_message,ToChar);
+
+        write(client_sock , client_message , 2000);//strlen(client_message));
 
     }
 
