@@ -6,7 +6,8 @@
 #include<arpa/inet.h>
 #include<netinet/in.h>
 #include<unistd.h>
-
+#include </usr/include/jansson.h>//jansson.h>
+#include <jansson_config.h>
 
 
 #define DNS_SERVER_IP "8.8.8.8"
@@ -15,7 +16,10 @@
 #define T_A 1
 #define T_TXT 16
 
-void dnsquery (unsigned char* , int);
+#define CURRENT_VERSION 1
+#define NUMBER_FIELD 3 // for query message
+
+json_t* dnsquery (unsigned char* , int);
 void ChangetoDnsNameFormat (unsigned char*,unsigned char*);
 unsigned char* ReadName (unsigned char*,unsigned char*,int*);
 
@@ -85,7 +89,7 @@ int main( int argc , char *argv[])
     return 0;
 }*/
 
-void dnsquery(unsigned char *host , int query_type)
+json_t* dnsquery(unsigned char *host , int query_type)
 {
     unsigned char buf[BUFSIZE],*qname,*reader;
     int i , j , stop , s;
@@ -137,13 +141,13 @@ void dnsquery(unsigned char *host , int query_type)
     if( sendto(s,(char*)buf,sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION),0,(struct sockaddr*)&dest,sizeof(dest)) < 0)
     {
         perror("sendto failed");
-        return ;
+        return NULL;
     }
 
     if(recvfrom (s,(char*)buf , 65536 , 0 , (struct sockaddr*)&dest , (socklen_t*)&i ) < 0)
     {
         perror("recvfrom failed");
-        return;
+        return NULL;
     }
 
     dns = (struct DNS_HEADER*) buf;
@@ -180,32 +184,41 @@ void dnsquery(unsigned char *host , int query_type)
         }
     }
 
-    //print answers//
+    json_t  *DNSreply = json_array(); // for trasfer to client
+    json_array_append_new(DNSreply,json_integer(CURRENT_VERSION));
+    json_array_append_new(DNSreply,json_integer(query_type)); // какой запрос, такой и ответ
+    json_array_append_new(DNSreply,json_integer(ntohs(dns->ans_count)));
+
+//    printf("\n\nCOUNT==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(DNSreply, 2)));
+
     printf("\nAnswer Records : %d \n" , ntohs(dns->ans_count) );
     for(i=0 ; i < ntohs(dns->ans_count) ; i++)
     {
-        printf("Name : %s ",answers[i].name);//  printf("\n!!!\n");
 
         if( ntohs(answers[i].resource->type) == T_A) //IPv4 address
         {
             long *p;
             p=(long*)answers[i].rdata;
             a.sin_addr.s_addr=(*p); //working without ntohl
-            printf("has IPv4 address : %s",inet_ntoa(a.sin_addr));
+        //    printf("has IPv4 address : %s",inet_ntoa(a.sin_addr));
+            json_array_append_new(DNSreply,json_string(inet_ntoa(a.sin_addr)));
+        //    printf("\n   JANSSON==->     %s", json_string_value(json_array_get(DNSreply, 3+i)));
+
         }
 
 
         if(ntohs(answers[i].resource->type)==T_TXT) // TXT record
         {
-            printf("TXT resoure : %s",answers[i].rdata);
+        //    printf("TXT resoure : %s",answers[i].rdata);
+            json_array_append_new(DNSreply,json_string(answers[i].rdata));
+        //    printf("\n   JANSSON==->     %s", json_string_value(json_array_get(DNSreply, 3+i)));
+
         }
-
-
-        printf("\n");
+    //    printf("\n\n");
     }
 
 
-    return;
+    return DNSreply;
 }
 
 
