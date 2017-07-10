@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include </usr/include/jansson.h>//jansson.h>
+#include <jansson.h>//jansson.h>
 #include <string.h>
 #include <jansson_config.h>
 
@@ -11,16 +11,25 @@ int find_char(char* str, int n, char s,int startpos);
 char* extract_str(char* str);
 json_t* create_dns_query(int version,int type_query, char* resourse_name);
 
-void f(FILE *file)
+/*void f(FILE *file)
 {
-//  file = fopen(fname,"r");
+
+
+}*/
+/*
+int main()
+{
+  const char fname[40]="text";
+  FILE* file;
+  file = fopen(fname,"r");
   if(file==NULL)
   {
-    printf("f==NULL\n");
+    printf("File not found\n");
     return -1;
   }
   char str[100];
   char *soure;
+  json_t* temp;
   while (!feof(file))
   {
     if(fgets(str,100,file)!=NULL)
@@ -28,30 +37,23 @@ void f(FILE *file)
       if((str[0]=='A')||((str[0]=='T')&&(str[1]=='X')&&(str[0]=='T')))
       {
         soure = extract_str(str);
-        printf("soure=%s\n",soure);
-        if((str[0]=='A') create_dns_query(CURRENT_VERSION,1,soure);
-        else create_dns_query(CURRENT_VERSION,16,soure);
-
+      //  printf("soure=%s\n",soure);
+        if(str[0]=='A') temp = create_dns_query(CURRENT_VERSION,1,soure);
+        else temp = create_dns_query(CURRENT_VERSION,16,soure);
+        printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(temp, 0)));
+        printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(temp, 1)));
+        printf("==->%s\n", json_string_value(json_array_get(temp, 2)));
+        printf("\n");
+        free(temp);
       }
     }
   }
 
-  fclose(f);
-
-}
-
-int main()
-{
-  const char fname[40]="/home/nikolay/Desktop/text";
-  FILE* f;
-  f = fopen(fname,"r");
-
-
-
+  fclose(file);
 
   return 0;
 }
-
+*//*
 int find_char(char* str, int n, char s,int startpos)
 {
   for(int i = startpos; i<n ; i++)
@@ -73,4 +75,14 @@ char* extract_str(char* str)
     soure[i]=str[k+i];
   }
   return soure;
+}
+*/
+json_t* create_dns_query(int version, int type_query, char* resourse_name)
+{
+    json_t  *DNStoTCPquery = json_array();
+
+    json_array_append_new(DNStoTCPquery,json_integer(version));
+    json_array_append_new(DNStoTCPquery,json_integer(type_query));
+    json_array_append_new(DNStoTCPquery,json_string(resourse_name));
+    return DNStoTCPquery;
 }

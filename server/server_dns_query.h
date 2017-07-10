@@ -23,10 +23,7 @@ json_t* dnsquery (unsigned char* , int);
 void ChangetoDnsNameFormat (unsigned char*,unsigned char*);
 unsigned char* ReadName (unsigned char*,unsigned char*,int*);
 
-void printA()
-{
-  printf("\n\n/TrafficTunneling/server/server_dns_query.h SUCCESS\n");
-}
+
 
 struct DNS_HEADER
 {
@@ -102,7 +99,7 @@ json_t* dnsquery(unsigned char *host , int query_type)
     struct DNS_HEADER *dns = NULL;
     struct QUESTION *qinfo = NULL;
 
-    printf("Resolving %s" , host);
+//    printf("Resolving %s" , host);
 
     s = socket(AF_INET , SOCK_DGRAM , IPPROTO_UDP);
 
@@ -187,33 +184,42 @@ json_t* dnsquery(unsigned char *host , int query_type)
     json_t  *DNSreply = json_array(); // for trasfer to client
     json_array_append_new(DNSreply,json_integer(CURRENT_VERSION));
     json_array_append_new(DNSreply,json_integer(query_type)); // какой запрос, такой и ответ
-    json_array_append_new(DNSreply,json_integer(ntohs(dns->ans_count)));
+    json_array_append_new(DNSreply,json_integer((int)ntohs(dns->ans_count)));
+
 
 //    printf("\n\nCOUNT==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(DNSreply, 2)));
 
-    printf("\nAnswer Records : %d \n" , ntohs(dns->ans_count) );
+  //  printf("\nAnswer Records : %d \n" , ntohs(dns->ans_count) );
     for(i=0 ; i < ntohs(dns->ans_count) ; i++)
     {
 
         if( ntohs(answers[i].resource->type) == T_A) //IPv4 address
         {
+          printf("ANSWER\n");
+
             long *p;
             p=(long*)answers[i].rdata;
             a.sin_addr.s_addr=(*p); //working without ntohl
-        //    printf("has IPv4 address : %s",inet_ntoa(a.sin_addr));
+            printf("has IPv4 address : %s\n",inet_ntoa(a.sin_addr));
             json_array_append_new(DNSreply,json_string(inet_ntoa(a.sin_addr)));
         //    printf("\n   JANSSON==->     %s", json_string_value(json_array_get(DNSreply, 3+i)));
 
         }
 
-
+        char t[2000];
         if(ntohs(answers[i].resource->type)==T_TXT) // TXT record
         {
         //    printf("TXT resoure : %s",answers[i].rdata);
-            json_array_append_new(DNSreply,json_string(answers[i].rdata));
+            printf("ANSWER1\n");
+            strcpy(t,answers[i].rdata);
+            printf("\t t=%s\n",t);
+            json_array_append_new(DNSreply,json_string(t));
         //    printf("\n   JANSSON==->     %s", json_string_value(json_array_get(DNSreply, 3+i)));
 
         }
+
+
+
     //    printf("\n\n");
     }
 

@@ -17,6 +17,8 @@
 #define T_A 1
 #define T_TXT 16
 
+#define MESSAGE_SIZE 2000
+
 int find_char(char* str, int n, char s,int startpos)
 {
   for(int i = startpos; i<n ; i++)
@@ -38,7 +40,7 @@ char* extract_str(char* str)
   for(int i=0;i<m-k;i++)
   {
     soure[i]=str[k+i];
-    printf("%c_",soure[i]);
+  //  printf("%c_",soure[i]);
   }
 /*  printf("\n\t\t\tIN EXTRACT: %s\n",soure);
   printf("\t\t\tsoure[k]=%c\n",str[k]);
@@ -93,7 +95,7 @@ int main(int argc , char *argv[])
 {
     int sock;
     struct sockaddr_in server;
-    char message[1000] , server_reply[2000];
+    char message[MESSAGE_SIZE] , server_reply[2000];
 
     //Create socket
     sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -129,29 +131,39 @@ int main(int argc , char *argv[])
 
     int k=0; //delete!!!
 
-    const char fname[200]="text";
-    FILE* file;
-    file = fopen(fname,"r");
-    if(file==NULL)
-    {
-      printf("File not found\n");
+    const char f_in_name[200]="text";
+    const char f_out_name[180]="out";
+    FILE *input_file,*outup_file;
+
+    input_file = fopen(f_in_name,"r");
+    outup_file = fopen(f_out_name,"w");
+
+    if(input_file==NULL ){
+      printf("File not found\\Error\n");
       close(sock);
       return -1;
     }
+    if( outup_file==NULL){
+      printf("Error\n");
+      close(sock);
+      return -1;
+    }
+
     char str[100];
     char *soure;
     json_t* temp;
 
-    while(!feof(file))
+    while(!feof(input_file))
     {
-      if(fgets(str,100,file)!=NULL)
+      if(fgets(str,100,input_file)!=NULL)
       {
         if((str[0]=='A')||((str[0]=='T')&&(str[1]=='X')&&(str[0]=='T')))
         {
           soure = extract_str(str);
           printf("\n\nsoure=%s\n",soure);
-          if(str[0]=='A') DNStoTCPquery = create_dns_query(CURRENT_VERSION,1,soure); // A-record
-          else DNStoTCPquery = create_dns_query(CURRENT_VERSION,16,soure);   // TXT-record
+          if(str[0]=='A')
+          {DNStoTCPquery = create_dns_query(CURRENT_VERSION,1,soure);} // A-record
+          else {DNStoTCPquery = create_dns_query(CURRENT_VERSION,16,soure);}   // TXT-record
         //  printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(DNStoTCPquery, 0)));
         //  printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(DNStoTCPquery, 1)));
           printf(" json==->%s\n", json_string_value(json_array_get(DNStoTCPquery, 2)));
@@ -165,16 +177,16 @@ int main(int argc , char *argv[])
 
       ToChar=json_dumps(DNStoTCPquery,0);
 
-        printf("Enter message : ");
-        scanf("%s" , message);
-        strcpy(message,"");
+    //    printf("Enter message : ");
+    //    scanf("%s" , message);
+    //    strcpy(message,"");
         strcpy(message,ToChar);
       //  printf("\nSENDsize=%d\n",json_array_size(DNStoTCPquery));
         //Send some data
-        if( (k= send(sock , message , strlen(message) , 0)) < 0)
+        if( send(sock , message , strlen(message) , 0) < 0)
         {
             puts("Send failed");
-            fclose(file);
+            fclose(input_file);
             close(sock);
             return 1;
         }
@@ -194,20 +206,46 @@ int main(int argc , char *argv[])
         newjson = json_loads(server_reply,0,&error);
     //    if(newjson!=NULL)  printf("YES_NEW\n");
     //    printf("\nREPLYsize=%d\n",json_array_size(newjson));
+      //  fputs((char*)(json_integer_value(json_array_get(newjson, 0))+'0'),outup_file);
+      //fputs("\t",outup_file);
+        int N=(int)json_integer_value(json_array_get(newjson, 2));
+        printf("N=%d\n",N);
         printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(newjson, 0)));
         printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(newjson, 1)));
         printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(newjson, 2)));
-        for(int i=0 ; i <json_integer_value(json_array_get(newjson, 2)) ; i++)
+        for(int i=0 ; i < json_integer_value(json_array_get(newjson, 2))  ; i++)
         {
-        printf("==->%s\n", json_string_value(json_array_get(newjson, 3+i)));
+
+          if(json_integer_value(json_array_get(newjson, 1))==T_A)  fputs("A, ",outup_file);
+          if(json_integer_value(json_array_get(newjson, 1))==T_TXT)  fputs("TXT, ",outup_file);
+          fputs(json_string_value(json_array_get(DNStoTCPquery, 2)),outup_file);
+          fputs(" ",outup_file);
+          /*if(N==0)
+          {
+            printf("------------------------>\n");
+            printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(newjson, 2)));
+            fputs("infromation about this soure not found\n",outup_file);
+            printf("infromation about this soure not found\n");
+            continue;
+          }*/
+
+          printf("==->%s\n", json_string_value(json_array_get(newjson, 3+i)));
+          fputs(json_string_value(json_array_get(newjson, 3+i)),outup_file);
+          fputs("\n",outup_file);
+
+          for(int i=0;i<MESSAGE_SIZE;i++)
+                    message[i]='\0';
+        //  memset(message,0,strlen(message));
         }
+
+
 
 
     //    printf("==->%s\n", json_string_value(error));
 
 
     }
-    fclose(file);
+    fclose(input_file);
     close(sock);
     return 0;
 }

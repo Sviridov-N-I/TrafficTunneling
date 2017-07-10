@@ -1,0 +1,3 @@
+all:
+	gcc tcp_server.c server_dns_query.h -o tcp_server -ljansson
+

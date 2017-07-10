@@ -97,8 +97,7 @@ int main(int argc , char *argv[])
 
 
       while( (read_size = recv(client_sock , client_message , BUL_LEN , 0)) > 0 )
-      {
-        //  printf("READ_SIZE= %d\n",read_size);
+      {   printf("READ_SIZE= %d\n",read_size);
           buf_json = json_loads(client_message,0,&error);
           if(buf_json==NULL)
           {
@@ -107,7 +106,7 @@ int main(int argc , char *argv[])
             return -1;
           }
           buf_name=read_dns_query_soure_name(buf_json);
-  //        puts(buf_name); //priintf resourse name
+          puts(buf_name); //priintf resourse name
           strcpy(hostname,buf_name);
           query_type=json_integer_value(json_array_get(buf_json, 1));
           jDNS_reply = dnsquery(hostname ,query_type);
