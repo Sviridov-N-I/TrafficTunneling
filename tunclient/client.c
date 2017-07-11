@@ -25,6 +25,12 @@ int find_char(char* str, int n, char s,int startpos);
 char* extract_str(char* str);
 json_t* create_dns_query(int version, int type_query, char* resourse_name);
 
+ struct Client_source
+{
+  int file_descriprion;
+  int sock_description;
+}Client_source;
+
 int dns_tun_client_init(char *server_ip,int port) // return a socket descriptoin
 {
   int sock;
@@ -53,50 +59,70 @@ int dns_tun_client_init(char *server_ip,int port) // return a socket descriptoin
 
 
 
-int  DNSquery(int sock,char *input_file,char *output_file)
+int  generate_dns_query(int sock,char *input_file,char *output_file)
 {
   FILE *f_in = fopen(input_file,"r");
   FILE *f_out = fopen(output_file, "w");
   if(f_in==NULL ){  //  printf("File not found\\Error\n");
     return -1;
   }
-  char str[READ_FILE_BUF_SIZE];
-  char *soure;
+  char file_line[READ_FILE_BUF_SIZE];
+  char *mnemonic_name, *query_to_char;
   json_t* DNStoTCPquery;
-//  printf("cotrol pint\n");
+  char buf_for_transfer[MESSAGE_SIZE];
   while(!feof(f_in))
   {
-    if(fgets(str,100,f_in)!=NULL)
+    if(fgets(file_line,100,f_in)!=NULL)
     {
-      if((str[0]=='A')||((str[0]=='T')&&(str[1]=='X')&&(str[0]=='T')))
+      if((file_line[0]=='A')||((file_line[0]=='T')&&(file_line[1]=='X')&&(file_line[0]=='T')))
       {
-      printf("%s",str);
-      soure=extract_str(str);
-      printf("     %s\n",soure);
-      if(str[0]=='A')
-      {DNStoTCPquery = create_dns_query(CURRENT_VERSION,1,soure);} // A-record
-      else {DNStoTCPquery = create_dns_query(CURRENT_VERSION,16,soure);}   // TXT-record
-    /*  printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(DNStoTCPquery, 0)));
-      printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(DNStoTCPquery, 1)));*/
-      printf("==->!%s!\n\n", json_string_value(json_array_get(DNStoTCPquery, 2)));
+        printf("%s",file_line);
+        mnemonic_name =extract_str(file_line);
+        if(file_line[0]=='A') { DNStoTCPquery = create_dns_query(CURRENT_VERSION,1,mnemonic_name);} // A-record
+        else { DNStoTCPquery = create_dns_query(CURRENT_VERSION,16,mnemonic_name);}   // TXT-record
+        // printf("==->!%s!\n", json_string_value(json_array_get(DNStoTCPquery, 2)));
+
+//  ????????    for(int i=0;i<MESSAGE_SIZE;i++) buf_for_transfer[i]='\0';
+
+         query_to_char = json_dumps(DNStoTCPquery,0);
+         strcpy(buf_for_transfer,query_to_char);
+
+
+         if( send(sock , buf_for_transfer , strlen(buf_for_transfer) , 0) < 0)
+         {
+             puts("Send failed");
+             fclose(f_in);
+             //close(sock);
+             return 1;
+         }
+         char server_reply[2000];
+         if( recv(sock , server_reply , 2000 , 0) < 0) {  puts("recv failed"); break; }
+
+  //       json_t* newjson = json_loads(query_to_char,0,NULL);
+  //       printf("==->?%s?\n\n\n", json_string_value(json_array_get(newjson, 2)));
+
+
       }
     }
+
   }
 
 }
 
 
+
 int main()
 {
+  struct Client_source *fssource = (struct Client_source*)calloc(1,sizeof(Client_source));
 
-  if(DNSquery(1,"input","outup")==-1) { printf("File error\n"); return -1;}
-  return 0;
+
 
   int sock = dns_tun_client_init("127.0.0.1",8888);
-  if(sock==-1) {
-//    printf("Error\n\n");
-    return -1;
-  }
+  if(sock==-1) { return -1; }
+  if(generate_dns_query(sock,"input","outup")==-1) { printf("File error\n"); return -1;}
+  return 0;
+  return -1;
+
 
   char message[MESSAGE_SIZE] , server_reply[MESSAGE_SIZE];
 
@@ -146,22 +172,22 @@ char* extract_str(char* str)
   int k = find_char(str,strlen(str),' ',0)+1;
   int m = strlen(str)-1; // strlen(str)-2 - last simbol string
   //printf("\n");
-  char* soure = (char*)malloc((strlen(str)-1)*sizeof(char));
-  memset(soure,0,(strlen(str)-1)*sizeof(char));
+  char* source = (char*)malloc((strlen(str)-1)*sizeof(char));
+  memset(source,0,(strlen(str)-1)*sizeof(char));
 
   for(int i=0;i<m-k;i++)
   {
-    soure[i]=str[k+i];
+    source[i]=str[k+i];
   }
-  return soure;
+  return source;
 }
 
-json_t* create_dns_query(int version, int type_query, char* resourse_name)
+json_t* create_dns_query(int version, int type_query, char* resource_name)
 {
     json_t  *DNStoTCPquery = json_array();
 
     json_array_append_new(DNStoTCPquery,json_integer(version));
     json_array_append_new(DNStoTCPquery,json_integer(type_query));
-    json_array_append_new(DNStoTCPquery,json_string(resourse_name));
+    json_array_append_new(DNStoTCPquery,json_string(resource_name));
     return DNStoTCPquery;
 }
