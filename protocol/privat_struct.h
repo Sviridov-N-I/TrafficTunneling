@@ -2,7 +2,10 @@
 #define PRIVATE_STRUCT_H_
 
 
+#define CURRENT_VERSION 1
 
+#define T_A 1
+#define T_TXT 16
 
 typedef struct Query
 {
