@@ -5,14 +5,17 @@
 #include <stdlib.h>
 #include <jansson.h>
 #include <jansson_config.h>
-#include "privat_struct.h"
-
+#include "private_structures.h"
 
 void query_init(Query *query, int type_query,char *source_name)
 {
   query->Type = type_query;
   query->source_name = source_name;
 }
+
+
+
+
 
 void reply_init( Reply *reply, int N,int type_query)
 {
@@ -30,6 +33,37 @@ int reply_add_str(Reply *reply, char *str)
   return 0;
 }
 
+char* reply_pop_str(Reply *reply,int i)
+{
+  return reply->mas_str[i];
+}
+
+
+
+int type_of_query(Query *query)
+{
+  return query->Type;
+}
+
+int type_of_reply(Reply *reply)
+{
+  return reply->Type;
+}
+
+char* source_name_of_query(Query *query)
+{
+  return query->source_name;
+}
+
+int max_count_of_reply(Reply *reply)
+{
+  return reply->N;
+}
+
+int current_count_of_reply(Reply *reply)
+{
+  return reply->current_count;
+}
 
 json_t* query_to_jsonformat(Query *query)
 {
