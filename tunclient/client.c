@@ -5,11 +5,9 @@
 
 #include <jansson.h>
 #include <jansson_config.h>
+#include <unistd.h>
 
-
-
-
-
+#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
 
 int find_char(char* str, int n, char s,int startpos)
 {
@@ -38,15 +36,7 @@ char* extract_str(char* str)
 
 
 
-json_t* create_dns_query(int version, int type_query, char* resource_name)
-{
-    json_t  *DNStoTCPquery = json_array();
 
-    json_array_append_new(DNStoTCPquery,json_integer(version));
-    json_array_append_new(DNStoTCPquery,json_integer(type_query));
-    json_array_append_new(DNStoTCPquery,json_string(resource_name));
-    return DNStoTCPquery;
-}
 
 
 int dns_tun_client_init(char *server_ip,int port)
@@ -83,12 +73,17 @@ int generate_dns_query(int sock,char *input_file,char *output_file)
   FILE *f_out = fopen(output_file, "w");
   if(f_in==NULL ){
     printf("File not found\\Error\n");
-    return -1;
+    goto done;
   }
+  if(f_out==NULL ){
+    printf("File not found\\Error\n");
+    goto close_input_file;
+  }
+
   char file_line[READ_FILE_BUF_SIZE];
   char *mnemonic_name, *query_to_char;
-  json_t* DNStoTCPquery;
   char buf_for_transfer[MESSAGE_SIZE];
+
   while(!feof(f_in))
   {
     if(fgets(file_line,100,f_in)!=NULL)
@@ -96,36 +91,84 @@ int generate_dns_query(int sock,char *input_file,char *output_file)
       if((file_line[0]=='A')||((file_line[0]=='T')&&(file_line[1]=='X')&&(file_line[0]=='T')))
       {
         printf("%s",file_line);
-        mnemonic_name =extract_str(file_line);
-        if(file_line[0]=='A') { DNStoTCPquery = create_dns_query(CURRENT_VERSION,1,mnemonic_name);} // A-record
-        else { DNStoTCPquery = create_dns_query(CURRENT_VERSION,16,mnemonic_name);}   // TXT-record
+        mnemonic_name = extract_str(file_line);
+
+        Query *query = ( Query*)malloc(sizeof(Query));
+
+
+        if(file_line[0]=='A') // A-record
+        {
+          query_init(query, T_A ,mnemonic_name);
+        }
+        else // TXT-record, because we have only 2 options
+        {
+          query_init(query, T_TXT ,mnemonic_name);
+
+        }
         // printf("==->!%s!\n", json_string_value(json_array_get(DNStoTCPquery, 2)));
+        //  ????????    for(int i=0;i<MESSAGE_SIZE;i++) buf_for_transfer[i]='\0';
 
-//  ????????    for(int i=0;i<MESSAGE_SIZE;i++) buf_for_transfer[i]='\0';
-
-         query_to_char = json_dumps(DNStoTCPquery,0);
+         json_t *json_new_format = query_to_jsonformat(query);
+         query_to_char = json_dumps(json_new_format,0);
          strcpy(buf_for_transfer,query_to_char);
 
 
-         if( send(sock , buf_for_transfer , strlen(buf_for_transfer) , 0) < 0)
-         {
+         if( send(sock , buf_for_transfer , strlen(buf_for_transfer) , 0) < 0){
              puts("Send failed");
-             fclose(f_in);
-             //close(sock);
-             return 1;
+             goto close_files;
          }
+
          char server_reply[2000];
          if( recv(sock , server_reply , 2000 , 0) < 0) {  puts("recv failed"); break; }
 
+         json_t* reply_json = json_loads(server_reply,0,NULL);
+         Reply*  reply = jsonformat_to_reply(reply_json);
+
+         if(reply->current_count==0){
+           if(type_of_reply(reply)==T_A)  fputs("A, ",f_out);
+           if(type_of_reply(reply)==T_TXT)  fputs("TXT, ",f_out);
+           fputs(mnemonic_name,f_out);
+           fputs(", infromation not found\n",f_out);
+         }
+
+         for(int i = 0;i<reply->current_count;i++)
+         {
+           if(type_of_reply(reply)==T_A)  fputs("A, ",f_out);
+           if(type_of_reply(reply)==T_TXT)  fputs("TXT, ",f_out);
+           fputs(mnemonic_name,f_out);
+           fputs(", ",f_out);
+           fputs( reply_pop_str(reply,i) , f_out);
+           fputs("\n",f_out);
+           printf(" %s\n", reply_pop_str(reply,i) );
+         }
+         printf("\n\n");
+
   //       json_t* newjson = json_loads(query_to_char,0,NULL);
   //       printf("==->?%s?\n\n\n", json_string_value(json_array_get(newjson, 2)));
-
+      }
+      else
+      {
+        mnemonic_name = extract_str(file_line);
+        printf("Error in \"%s\"\n\n",mnemonic_name);
+        fputs("Invalid string format, \"",f_out);
+        fputs(mnemonic_name,f_out);
+        fputs("\"\n",f_out);
 
       }
     }
 
   }
-//  close(f_in);
-//  close(f_out);
+  fclose(f_in);
+  fclose(f_out);
+
+  return 0;
+
+  close_files:
+    fclose(f_out);
+  close_input_file:
+    fclose(f_in);
+  done:
+    close(sock);
+  return -1;
 
 }
