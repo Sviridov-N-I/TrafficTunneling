@@ -6,7 +6,8 @@
 
 #include <jansson.h>//jansson.h>
 #include <jansson_config.h>
-#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/tunserver/server_dns_query.h>
+#include "server_dns_query.h"
+
 
 #define PORT 8888
 #define BUL_LEN 2000
@@ -124,7 +125,7 @@ int main(int argc , char *argv[])
       //    printf("\nsize=%d\n",json_array_size(jDNS_reply));
     /*      printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 0)));        printf("==->%" JSON_INTEGER_FORMAT "\n", json_integer_value(json_array_get(buf_json, 1)));        printf("==->%s\n", json_string_value(json_array_get(buf_json, 2)));*/
       //     printf("==->%s\n", json_integer_value(json_array_get(jDNS_reply, 2)));
-          printf("N = %d\n",(int)json_integer_value(json_array_get(jDNS_reply, 2)));
+//!!!!!!!!!!!!!!!             printf("N = %d\n",(int)json_integer_value(json_array_get(jDNS_reply, 2)));
           ToChar=json_dumps(jDNS_reply,0);
 
   //      strcpy(client_message,"");
