@@ -19,35 +19,34 @@ int main(int argc, char *argv[])
        *ip_address,//= "127.0.0.5",
        *port;// = "8888";
 
-  printf("Source file: !%s!\n",source_file);
+//  printf("Source file: !%s!\n",source_file);
 
 
   while ( (rez = getopt(argc,argv,"a:p:s:d:h")) != -1)
   {
     switch (rez)
     {
-    case 'a': printf("IP-address: %s\n",optarg);
+    case 'a': //printf("IP-address: %s\n",optarg);
       ip_address=(char*)optarg;
       break;
-    case 'p': printf("port: %s\n",optarg);
+    case 'p': //printf("port: %s\n",optarg);
       port=(char*)optarg;
       break;
-    case 's': printf("Source file: %s\n",optarg);
+    case 's': //printf("Source file: %s\n",optarg);
       source_file = (char*)optarg;
       break;
-    case 'd': printf("Destination file: %s\n",optarg);
+    case 'd': //printf("Destination file: %s\n",optarg);
         destination_file = (char*)optarg;
         break;
-    case 'h': printf("Source file: %s\n",optarg);
-        printf("****************************************\n");
-        printf("This is DNS tunneling system\n");
-        printf("Enter the following parameters:\n");
-        printf("-a server IP-address s\n");
-        printf("-p Port\n");
-        printf("-s input(source) file\n");
-        printf("-d destination(output) file\n");
-
-        printf("****************************************\n");
+    case 'h': //printf("Source file: %s\n",optarg);
+        printf("\n**********************************************\n");
+        printf("*\tThis is DNS tunneling system         *\n");
+        printf("*\tEnter the following parameters:      *\n");
+        printf("*\t-a server IP-address s               *\n");
+        printf("*\t-p Port                              *\n");
+        printf("*\t-s input(source) file                *\n");
+        printf("*\t-d destination(output) file          *\n");
+        printf("**********************************************\n\n");
 
         help=1;
         break;
