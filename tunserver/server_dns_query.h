@@ -8,6 +8,7 @@
 #include<unistd.h>
 #include <jansson.h>//jansson.h>
 #include <jansson_config.h>
+#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
 
 
 #define DNS_SERVER_IP "8.8.8.8"
@@ -83,7 +84,8 @@ int main( int argc , char *argv[])
     strcpy(hostname,"google.com");
     dnsquery(hostname , 1);
 
-    return 0;
+    return 0;#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
+
 }*/
 
 json_t* dnsquery(unsigned char *host , int query_type)
@@ -146,36 +148,33 @@ json_t* dnsquery(unsigned char *host , int query_type)
         perror("recvfrom failed");
         return NULL;
     }
-    printf("\n");
-    printf("Packet:\n");
-  //  printf("buf[7] = %c\n",buf[7]);
-  //  printf("buf[7] = %d\n",buf[7]);
 
-    printf("soure IN PACKET: ");
+    Reply *reply = ( Reply*)malloc(sizeof(Reply)); // not init yet
+    memset(reply,0,sizeof(Reply));
+
+
+
     int buffer_counter=13; // start position(there is begin reple name)
-    for( ; ;buffer_counter++)
-    {
-      printf("%c",buf[buffer_counter]);
-      if((int)buf[buffer_counter]==0) break;
+
+    for( ; ;buffer_counter++){
+      if(buf[buffer_counter]==0) break; //skip the soure name
     }
-
-    printf("\nsoure IN PACKET: ");
-    for(int it=13;;it++) { printf("%d ",buf[it]); if((int)buf[it]==0) break; }
-
     buffer_counter+=5;// now buffer_counter poiters to C0(name+5)
+
+
     int cnt_extract_rec = buffer_counter;
-
-  //  cnt_extract_rec = buffer_counter+2;// skip the name(C0 & 0C)
-
     int txt_data_len=0;
+
+    if(buf[cnt_extract_rec+2] == 0 && buf[cnt_extract_rec+3] == T_TXT) {reply_init(reply,100,T_TXT);}
+    if(buf[cnt_extract_rec+2] == 0 && buf[cnt_extract_rec+3] == T_A) {reply_init(reply,100,T_A);}
 
     for(int k=0;k<65535;k++)
     {
       if(buf[cnt_extract_rec+1]==0) { break;}
       cnt_extract_rec+=2;// skip the name(C0 & 0C)
-    //  printf("\n\tbuf[buffer_counter] = %d\n",buf[cnt_extract_rec]);
-  //    printf("\tbuf[buffer_counter+1] = %d\n",buf[cnt_extract_rec+1]);
-      if(buf[cnt_extract_rec] == 0 && buf[cnt_extract_rec+1] == 16) // check type reply
+      char* buf_for_add_in_reply;
+
+      if(buf[cnt_extract_rec] == 0 && buf[cnt_extract_rec+1] == T_TXT) // check type reply
       {
 
         cnt_extract_rec+=2; //skip type reply
@@ -183,19 +182,28 @@ json_t* dnsquery(unsigned char *host , int query_type)
         cnt_extract_rec+=6;// skip class and TTL
         cnt_extract_rec+=2;// skip data lengh
         txt_data_len = buf[cnt_extract_rec];
-    //    printf("\ntxt_data_len = %d\n",txt_data_len);
+        printf("\ntxt_data_len = %d\n",txt_data_len);
         cnt_extract_rec++;//pass to data
 
-        printf("\nrecord %d:\t",k+1); // useful use 'k'
+        printf("\nrecord %d:\n",k+1); // useful use 'k'
+        buf_for_add_in_reply = (char*)malloc(txt_data_len*sizeof(char)+1);
+        memset(buf_for_add_in_reply,0,txt_data_len*sizeof(char)+1);
 
-        for(int it = 0; it < txt_data_len;it++)
-        {
+        for(int it = 0; it < txt_data_len;it++) {
           printf("%c", buf[cnt_extract_rec + it]);
+          buf_for_add_in_reply[it]=buf[cnt_extract_rec + it];
         }
+    //    printf("\n%s\n",buf_for_add_in_reply);
+        printf("\nreply->current_count = %d\n",reply->current_count);
+        reply_add_str(reply,buf_for_add_in_reply);
+        printf("reply->current_count = %d\n",reply->current_count);
+
         cnt_extract_rec+=txt_data_len;
       }
-      if(buf[cnt_extract_rec] == 0 && buf[cnt_extract_rec+1] == 1) // check type reply
+
+      else if(buf[cnt_extract_rec] == 0 && buf[cnt_extract_rec+1] == T_A) // check type reply
       {
+
         cnt_extract_rec+=2;
 
           cnt_extract_rec+=6;// skip class and TTL
@@ -203,21 +211,36 @@ json_t* dnsquery(unsigned char *host , int query_type)
           cnt_extract_rec+=2; // skip size ip
       //    printf("\nSIZE IP = %d\n",size_ip);
 
-          printf("\nrecord %d:\t",k+1); // useful use 'k'
+          printf("\nrecord %d:\n",k+1); // useful use 'k'
+          buf_for_add_in_reply = (char*)malloc(16);
+          memset(buf_for_add_in_reply,0,16);
+
+
           int it = 0;
+          sprintf(buf_for_add_in_reply, "%d.%d.%d.%d", buf[cnt_extract_rec],
+                                      buf[cnt_extract_rec + 1],
+                                      buf[cnt_extract_rec + 2],
+                                      buf[cnt_extract_rec + 3]);
           for(; it < size_ip-1;it++)
           {
             printf("%d.", buf[cnt_extract_rec + it]);
           }
           printf("%d", buf[cnt_extract_rec + it]);
-
+        //  printf("\n%s\n", buf_for_add_in_reply);
+          reply_add_str(reply,buf_for_add_in_reply);
           cnt_extract_rec+=size_ip;
-        //  break;
+      }
+      else
+      {
+        // message about error
       }
 
     }
     printf("\n");
+    printf("JSON:\n");
 
+
+    return reply_to_jsonformat(reply);
 
 
 
