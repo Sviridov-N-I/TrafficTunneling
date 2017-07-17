@@ -41,10 +41,10 @@ struct DNS_HEADER
     unsigned char z :1;
     unsigned char ra :1;
 
-    unsigned short q_count;
-    unsigned short ans_count;
-    unsigned short auth_count;
-    unsigned short add_count;
+    unsigned short q_count:16;
+    unsigned short ans_count:16;
+    unsigned short auth_count:16;
+    unsigned short add_count:16;
 };
 
 struct QUESTION
@@ -56,10 +56,10 @@ struct QUESTION
 #pragma pack(push, 2)
 struct R_DATA
 {
-    unsigned short type;
-    unsigned short _class;
-    unsigned int ttl;
-    unsigned short data_len;
+    unsigned short type:16;
+    unsigned short _class:16;
+    unsigned int ttl:32;
+    unsigned short data_len:16;
 };
 #pragma pack(pop)
 
@@ -140,16 +140,94 @@ json_t* dnsquery(unsigned char *host , int query_type)
         perror("sendto failed");
         return NULL;
     }
-
+    memset(buf,0,65536);
     if(recvfrom (s,(char*)buf , 65536 , 0 , (struct sockaddr*)&dest , (socklen_t*)&i ) < 0)
     {
         perror("recvfrom failed");
         return NULL;
     }
+    printf("\n");
+    printf("Packet:\n");
+  //  printf("buf[7] = %c\n",buf[7]);
+  //  printf("buf[7] = %d\n",buf[7]);
+
+    printf("soure IN PACKET: ");
+    int buffer_counter=13; // start position(there is begin reple name)
+    for( ; ;buffer_counter++)
+    {
+      printf("%c",buf[buffer_counter]);
+      if((int)buf[buffer_counter]==0) break;
+    }
+
+    printf("\nsoure IN PACKET: ");
+    for(int it=13;;it++) { printf("%d ",buf[it]); if((int)buf[it]==0) break; }
+
+    buffer_counter+=5;// now buffer_counter poiters to C0(name+5)
+    int cnt_extract_rec = buffer_counter;
+
+  //  cnt_extract_rec = buffer_counter+2;// skip the name(C0 & 0C)
+
+    int txt_data_len=0;
+
+    for(int k=0;k<65535;k++)
+    {
+      if(buf[cnt_extract_rec+1]==0) { break;}
+      cnt_extract_rec+=2;// skip the name(C0 & 0C)
+    //  printf("\n\tbuf[buffer_counter] = %d\n",buf[cnt_extract_rec]);
+  //    printf("\tbuf[buffer_counter+1] = %d\n",buf[cnt_extract_rec+1]);
+      if(buf[cnt_extract_rec] == 0 && buf[cnt_extract_rec+1] == 16) // check type reply
+      {
+
+        cnt_extract_rec+=2; //skip type reply
+    //    printf("TXT TYPE\n");
+        cnt_extract_rec+=6;// skip class and TTL
+        cnt_extract_rec+=2;// skip data lengh
+        txt_data_len = buf[cnt_extract_rec];
+    //    printf("\ntxt_data_len = %d\n",txt_data_len);
+        cnt_extract_rec++;//pass to data
+
+        printf("\nrecord %d:\t",k+1); // useful use 'k'
+
+        for(int it = 0; it < txt_data_len;it++)
+        {
+          printf("%c", buf[cnt_extract_rec + it]);
+        }
+        cnt_extract_rec+=txt_data_len;
+      }
+      if(buf[cnt_extract_rec] == 0 && buf[cnt_extract_rec+1] == 1) // check type reply
+      {
+        cnt_extract_rec+=2;
+
+          cnt_extract_rec+=6;// skip class and TTL
+          int size_ip =(int)buf[cnt_extract_rec+1];
+          cnt_extract_rec+=2; // skip size ip
+      //    printf("\nSIZE IP = %d\n",size_ip);
+
+          printf("\nrecord %d:\t",k+1); // useful use 'k'
+          int it = 0;
+          for(; it < size_ip-1;it++)
+          {
+            printf("%d.", buf[cnt_extract_rec + it]);
+          }
+          printf("%d", buf[cnt_extract_rec + it]);
+
+          cnt_extract_rec+=size_ip;
+        //  break;
+      }
+
+    }
+    printf("\n");
+
+
+
+
+
+
 
     dns = (struct DNS_HEADER*) buf;
 
     reader = &buf[sizeof(struct DNS_HEADER) + (strlen((const char*)qname)+1) + sizeof(struct QUESTION)];
+
 
     // reading answers//
     stop=0;
@@ -161,6 +239,7 @@ json_t* dnsquery(unsigned char *host , int query_type)
         answers[i].resource = (struct R_DATA*)(reader);
         reader = reader + sizeof(struct R_DATA);
 
+
         if(ntohs(answers[i].resource->type) == 1) //if its an ipv4 address
         {
             answers[i].rdata = (unsigned char*)malloc(ntohs(answers[i].resource->data_len));
@@ -171,6 +250,7 @@ json_t* dnsquery(unsigned char *host , int query_type)
             }
 
             answers[i].rdata[ntohs(answers[i].resource->data_len)] = '\0';
+
 
             reader = reader + ntohs(answers[i].resource->data_len);
         }
@@ -201,28 +281,31 @@ json_t* dnsquery(unsigned char *host , int query_type)
             long *p;
             p=(long*)answers[i].rdata;
             a.sin_addr.s_addr=(*p); //working without ntohl
-            printf("has IPv4 address : %s\n",inet_ntoa(a.sin_addr));
+//!!!!!!!!!!!!!!!            printf("has IPv4 address : %s\n",inet_ntoa(a.sin_addr));
             json_array_append_new(DNSreply,json_string(inet_ntoa(a.sin_addr)));
         //    printf("\n   JANSSON==->     %s", json_string_value(json_array_get(DNSreply, 3+i)));
 
         }
 
         char t[2000];
+//!!!!!!!!!!!!!!!        printf("type = %d\t",ntohs(answers[i].resource->type));
+
         if(ntohs(answers[i].resource->type)==T_TXT || ntohs(answers[i].resource->type)==4096) // TXT record
         {
-    /*      printf("type = %d\t",ntohs(answers[i].resource->type));
-          printf("class = %d\t",ntohs(answers[i].resource->_class));
+
+//!!!!!!!!!!!!!!!             printf("type = %d\n",ntohs(answers[i].resource->type));
+    /*      printf("class = %d\t",ntohs(answers[i].resource->_class));
           printf("ttl = %d\t",ntohs(answers[i].resource->ttl));
           printf("data_len = %d\t",ntohs(answers[i].resource->data_len));
           printf("\n\t\t rdata = %s\n",answers[i].rdata);*/
 /*          printf("data_len = %d\n",answers[i].resoure->data_len);*/
-            printf("\tTXT resoure[%d] : %s",i,answers[i].rdata);
+//!!!!!!!!!!!!!!!               printf("  TXT resoure[%d] : %s",i,answers[i].rdata);
           //  printf("\tstrlen = %d",strlen(answers[i].rdata));
-            strcpy(t,answers[i].rdata);
+             strcpy(t,answers[i].rdata);
         //    printf("\t t=%s\n",t);
-            json_array_append_new(DNSreply,json_string(t));
+             json_array_append_new(DNSreply,json_string(t));
         //    printf("\n   JANSSON==->     %s", json_string_value(json_array_get(DNSreply, 3+i)));
-              printf("\n\n");
+//!!!!!!!!!!!!!!!                 printf("\n");
         }
 
 
@@ -269,23 +352,35 @@ u_char* ReadName(unsigned char* reader,unsigned char* buffer,int* count)
     }
 
     name[p]='\0';
+  //  printf("name: %s\n",name);
     if(jumped==1)
     {
         *count = *count + 1;
     }
-
+  //  printf("name before: %s\n",name);
+  //  return name;
+  //  printf("\n for: ");
 
     for(i=0;i<(int)strlen((const char*)name);i++)
     {
         p=name[i];
+        //printf("name[i]: %c\t",name[i]);
+      //  printf("p: %d\n",p);
+
         for(j=0;j<(int)p;j++)
         {
+          //  printf("%c",name[i]);
+            if(name[i]==6) { break; printf("(%d)",name[i]);}
+              if(name[i]==2) {break; printf("(%d)",name[i]);}
+
             name[i]=name[i+1];
             i=i+1;
         }
         name[i]='.';
     }
+    printf("\n");
     name[i-1]='\0';
+  //  printf("name after:   %s\n",name);
     return name;
 }
 
