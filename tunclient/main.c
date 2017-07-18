@@ -2,7 +2,7 @@
 
 #include "client.h"
 
-#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
+//#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
 
 //  ./main -a 127.0.0.1 -p 8888 -s input -d output
 

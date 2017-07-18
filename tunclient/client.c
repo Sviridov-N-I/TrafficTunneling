@@ -7,7 +7,9 @@
 #include <jansson_config.h>
 #include <unistd.h>
 
-#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
+//#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
+#include "private_structures.h"
+//#include "private_variables.h"
 
 int find_char(char* str, int n, char s,int startpos)
 {
