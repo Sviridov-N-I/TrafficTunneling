@@ -11,9 +11,11 @@
 #include<unistd.h>
 #include <jansson.h>//jansson.h>
 #include <jansson_config.h>
-#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
+//#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
+//#include "protocol.h"
 
-
+#include "private_structures.h"
+ 
 #define DNS_SERVER_IP "8.8.8.8"
 #define BUFSIZE 65536
 // query type
