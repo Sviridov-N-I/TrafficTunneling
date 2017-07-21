@@ -1,2 +1,0 @@
-all:
-	gcc client.c rw.h -o client -ljansson
