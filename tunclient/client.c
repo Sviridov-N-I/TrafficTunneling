@@ -1,15 +1,15 @@
-#include<stdio.h>
-#include<string.h>
-#include<sys/socket.h>
-#include<arpa/inet.h>
-
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include "private_client_variables.h"
 #include <jansson.h>
 #include <jansson_config.h>
 #include <unistd.h>
 
-//#include </home/nikolay/Desktop/Tunneling/TrafficTunneling/protocol/protocol.h>
-#include "private_structures.h"
-//#include "private_variables.h"
+#include <protocol.h>
+
+
 
 int find_char(char* str, int n, char s,int startpos)
 {
@@ -41,7 +41,7 @@ char* extract_str(char* str)
 
 
 
-int dns_tun_client_init(char *server_ip,int port)
+Client_resource* dns_tun_client_init(char *server_ip,int port)
 {
   int sock;
   struct sockaddr_in server;
@@ -49,7 +49,7 @@ int dns_tun_client_init(char *server_ip,int port)
   sock = socket(AF_INET , SOCK_STREAM , 0);
   if (sock == -1) {
       printf("Could not create socket");
-      return -1;
+      return NULL;
   }
   puts("Socket created");
 
@@ -60,17 +60,25 @@ int dns_tun_client_init(char *server_ip,int port)
   if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
   {
       perror("connect failed. Error");
-      return -1;
+      return NULL;
   }
   puts("Connected\n");
-  return sock;
+
+  Client_resource *resource = ( Client_resource*)malloc(sizeof(Client_resource));
+  memset(resource, 0, sizeof(Client_resource));
+  resource->sock=sock;
+  return resource;
 }
 
 
 
 
-int generate_dns_query(int sock,char *input_file,char *output_file)
+int generate_dns_query(Client_resource *resource)
 {
+  int sock = resource->sock;
+  char * input_file = resource->input_file;
+  char * output_file = resource->output_file;
+
   FILE *f_in = fopen(input_file,"r");
   FILE *f_out = fopen(output_file, "w");
   if(f_in==NULL ){
@@ -78,9 +86,14 @@ int generate_dns_query(int sock,char *input_file,char *output_file)
     goto done;
   }
   if(f_out==NULL ){
-    printf("File not found\\Error\n");
+    printf("File not found\nError\n");
     goto close_input_file;
   }
+
+  resource->input_file_descr = f_in;
+  resource->output_file_descr = f_out;
+
+
 
   char file_line[READ_FILE_BUF_SIZE];
   char *mnemonic_name, *query_to_char;
@@ -158,10 +171,10 @@ int generate_dns_query(int sock,char *input_file,char *output_file)
 
       }
     }
+    fflush(f_out);
 
   }
-  fclose(f_in);
-  fclose(f_out);
+
 
   return 0;
 
@@ -173,4 +186,16 @@ int generate_dns_query(int sock,char *input_file,char *output_file)
     close(sock);
   return -1;
 
+}
+
+
+
+
+
+void dns_tun_client_deinit(Client_resource *resource)
+{
+  fclose(resource->input_file_descr);
+  fclose(resource->output_file_descr);
+  close(resource->sock);
+  free(resource);
 }
