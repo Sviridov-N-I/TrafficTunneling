@@ -10,7 +10,6 @@
 #include <protocol.h>
 
 
-
 int find_char(char* str, int n, char s,int startpos)
 {
   for(int i = startpos; i<n ; i++)
