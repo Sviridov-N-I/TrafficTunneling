@@ -1,11 +1,13 @@
 #ifndef SERVER_H_
 #define SERVER_H_
 
-#include "server.c"
-
+//#include "server.c"
+#include <jansson.h>//jansson.h>
+#include <jansson_config.h>
 
 #define PORT 8888
 #define BUL_LEN 2000
+
 
 
 #define T_A 1
