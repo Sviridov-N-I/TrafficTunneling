@@ -1,9 +1,27 @@
-copytoserv: protocolpro
-	cp ./protocol/private_structures.h ./tunserver/private_structures.h
-copytoclient: protocolpro2
-	cp ./protocol/private_structures.h ./tunclient/private_structures.h
-protocolpro:
-	gcc -c protocol/protocol.c -o tunserver/protocol.o
-protocolpro2:
-	gcc -c protocol/protocol.c -o tunclient/protocol.o
+protocol_dir = ./protocol
+JSON_LIB = -ljansson
+Thred_lib = -lpthread
+
+
+all: client server
+
+server:	protocol.o server.o
+	$(CC) tunserver/main.c protocol.o  server.o -o server $(JSON_LIB) -I $(protocol_dir) $(Thred_lib)
+	
+client: protocol.o client.o 
+	$(CC) tunclient/main.c protocol.o client.o -o client $(JSON_LIB) -I $(protocol_dir)
+protocol.o:
+	$(CC) -c $(protocol_dir)/protocol.c -o protocol.o -ljansson
+server.o:
+	$(CC) -c tunserver/server.c -o server.o -I  $(protocol_dir) $(Thred_lib)
+client.o:
+	$(CC) -c tunclient/client.c -o client.o -I  $(protocol_dir)
+
+
+
+
+clean:
+	rm *.o
+
+
 
