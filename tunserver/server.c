@@ -8,15 +8,24 @@
 #include <jansson_config.h>
 #include <protocol.h>
 #include<pthread.h> //for threading , link with lpthread
+#include <signal.h>
 
 
 #include "private_server_variables.h"
+
+Server_resource *global_resource;
+
+
+void handle_ctrl_c(int sig);
 
 
 Server_resource* dns_tun_server_init(int port, int n_listen)
 {
   int socket_desc;
   struct sockaddr_in server;
+
+  (void)signal(SIGINT, handle_ctrl_c); // signal recording
+
 
   socket_desc = socket(AF_INET , SOCK_STREAM , 0);
   if (socket_desc == -1)
@@ -42,7 +51,7 @@ Server_resource* dns_tun_server_init(int port, int n_listen)
   resource->sock=socket_desc;
 
   listen(resource->sock , n_listen);
-
+  global_resource = resource;
 
   return resource;
 }
@@ -53,6 +62,15 @@ Server_resource* dns_tun_server_deinit(Server_resource *resource)
   close(resource->sock);
   free(resource);
 }
+
+
+void handle_ctrl_c(int sig)
+{
+  dns_tun_server_deinit(global_resource);
+  printf("\nResources was released\n");
+  exit(EXIT_SUCCESS);
+}
+
 
 
 void ChangetoDnsNameFormat(unsigned char* dns,unsigned char* host)
@@ -303,7 +321,7 @@ void* function_of_client_service(void *socket_desc)
       if(buf_json==NULL)
       {
         printf("JSON Error\n");
-      //  goto close_sock;
+        goto close_sock;
       }
       query = jsonformat_to_query(buf_json);
       jDNS_reply = dnsquery(source_name_of_query(query) ,type_of_query(query));
@@ -311,7 +329,7 @@ void* function_of_client_service(void *socket_desc)
         if(jDNS_reply==NULL)
         {
           printf("Error\n");
-      //    goto close_sock;
+          goto close_sock;
         }
         ToChar=json_dumps(jDNS_reply,0);
         strcpy(client_message,ToChar);
@@ -332,8 +350,9 @@ void* function_of_client_service(void *socket_desc)
           perror("recv failed");
       }
   }
-/*  return 0;
+  return 0;
   close_sock:
-   dns_tun_server_deinit(resource);
-  return -1;*/
+  close(client_sock);
+  //dns_tun_server_deinit(resource);
+  return 0;
 }
