@@ -9,6 +9,13 @@
 
 #include <protocol.h>
 
+#include <signal.h>
+
+Client_resource *global_resource;
+
+
+void handle_ctrl_c(int sig);
+
 
 int find_char(char* str, int n, char s,int startpos)
 {
@@ -42,6 +49,9 @@ char* extract_str(char* str)
 
 Client_resource* dns_tun_client_init(char *server_ip,int port)
 {
+
+  (void)signal(SIGINT, handle_ctrl_c); // signal recording
+
   int sock;
   struct sockaddr_in server;
 
@@ -66,6 +76,7 @@ Client_resource* dns_tun_client_init(char *server_ip,int port)
   Client_resource *resource = ( Client_resource*)malloc(sizeof(Client_resource));
   memset(resource, 0, sizeof(Client_resource));
   resource->sock=sock;
+  global_resource = resource;
   return resource;
 }
 
@@ -197,4 +208,11 @@ void dns_tun_client_deinit(Client_resource *resource)
   fclose(resource->output_file_descr);
   close(resource->sock);
   free(resource);
+}
+
+void handle_ctrl_c(int sig)
+{
+  dns_tun_client_deinit(global_resource);
+  printf("\nResources was released\n");
+  exit(EXIT_SUCCESS);
 }
