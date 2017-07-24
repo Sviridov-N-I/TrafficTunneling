@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 
 
 
-  if(source_file==NULL || destination_file==NULL || ip_address==NULL) {
+  if(source_file==NULL || destination_file==NULL || ip_address==NULL || port == NULL) {
     printf("\t Input error \n");
     print_error();
     return 0;
