@@ -4,6 +4,18 @@
 
 #define DNS_SERVER_IP "8.8.8.8"
 #define BUFSIZE 65536
+#define BUL_LEN 2000
+
+
+typedef struct Server_resource
+{
+  int sock;
+  int port;
+  int queue_length;
+//  int sequence_number_of_the_thread;
+  int number_of_threads;
+}Server_resource;
+
 
 
 struct DNS_HEADER

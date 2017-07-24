@@ -7,13 +7,12 @@
 #include <jansson.h>
 #include <jansson_config.h>
 #include <protocol.h>
-#include<pthread.h> //for threading , link with lpthread
 
 
 #include "private_server_variables.h"
 
 
-Server_resource* dns_tun_server_init(int port, int n_listen)
+Server_resource* dns_tun_server_init(int port)
 {
   int socket_desc;
   struct sockaddr_in server;
@@ -41,7 +40,7 @@ Server_resource* dns_tun_server_init(int port, int n_listen)
   Server_resource *resource = (Server_resource*)malloc(sizeof(Server_resource));
   resource->sock=socket_desc;
 
-  listen(resource->sock , n_listen);
+  listen(resource->sock , 3);
 
 
   return resource;
@@ -230,54 +229,13 @@ json_t* dnsquery(unsigned char *host , int query_type)
 }
 
 
-void set_number_of_threads(Server_resource *resource, int n)
-{
-  resource->number_of_threads = n;
-
-}
-
-void* function_of_client_service(void *socket_desc);
-
 
 int processing(Server_resource *resource)
 {
-
-
-  int N = resource->number_of_threads;
-  pthread_t *mas_thread_id=(pthread_t*)malloc(N*sizeof(pthread_t));
-  memset(mas_thread_id,0,N*sizeof(pthread_t));
-
-  int *new_sock = malloc(sizeof(int));
-  *new_sock = resource->sock;
-
-  for(int i = 0; i < N ; i++)
-  {
-    if( pthread_create( &mas_thread_id[i] , NULL ,  function_of_client_service , (void*) new_sock) < 0)
-    {
-        perror("could not create thread");
-        return 1;
-    }
-  }
-
-  for(int i = 0;i<N;i++)
-  {
-    pthread_join( mas_thread_id[i] , NULL);
-  }
-
-  free(new_sock);
-
-
-  return 0;
-}
-
-
-void* function_of_client_service(void *socket_desc)
-{
-  int sock = *(int*)socket_desc;
-
   int  client_sock , c , read_size;
   struct sockaddr_in client;
   char client_message[BUL_LEN];
+
 
   json_t* buf_json = NULL;
   json_t* jDNS_reply = NULL;
@@ -289,11 +247,11 @@ void* function_of_client_service(void *socket_desc)
     puts("Waiting for incoming connections...\n");
     c = sizeof(struct sockaddr_in);
 
-    client_sock = accept(sock, (struct sockaddr *)&client, (socklen_t*)&c);
+    client_sock = accept(resource->sock, (struct sockaddr *)&client, (socklen_t*)&c);
     if (client_sock < 0)
     {
         perror("accept failed");
-      //  goto close_sock;
+        goto close_sock;
     }
 
     while( (read_size = recv(client_sock , client_message , BUL_LEN , 0)) > 0 )
@@ -303,7 +261,7 @@ void* function_of_client_service(void *socket_desc)
       if(buf_json==NULL)
       {
         printf("JSON Error\n");
-      //  goto close_sock;
+        goto close_sock;
       }
       query = jsonformat_to_query(buf_json);
       jDNS_reply = dnsquery(source_name_of_query(query) ,type_of_query(query));
@@ -311,7 +269,7 @@ void* function_of_client_service(void *socket_desc)
         if(jDNS_reply==NULL)
         {
           printf("Error\n");
-      //    goto close_sock;
+          goto close_sock;
         }
         ToChar=json_dumps(jDNS_reply,0);
         strcpy(client_message,ToChar);
@@ -332,8 +290,8 @@ void* function_of_client_service(void *socket_desc)
           perror("recv failed");
       }
   }
-/*  return 0;
+  return 0;
   close_sock:
    dns_tun_server_deinit(resource);
-  return -1;*/
+  return -1;
 }
