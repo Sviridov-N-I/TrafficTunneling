@@ -3,8 +3,9 @@
 
 #include "private_structures.h"
 
-#include "protocol.c"
-
+//#include "protocol.c"
+#include <jansson.h>
+#include <jansson_config.h>
 
 
 
