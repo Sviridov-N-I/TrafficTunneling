@@ -72,7 +72,7 @@ Server_resource* dns_tun_server_deinit(Server_resource *resource)
 void handle_ctrl_c(int sig)
 {
   dns_tun_server_deinit(global_resource);
-  printf("\nResources was released\n");
+  printf("\nResources were released\n");
   exit(EXIT_SUCCESS);
 }
 
