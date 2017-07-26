@@ -1,8 +1,7 @@
 #ifndef SERVER_H_
 #define SERVER_H_
 
-//#include "server.c"
-#include <jansson.h>//jansson.h>
+#include <jansson.h>
 #include <jansson_config.h>
 #include "private_server_variables.h"
 

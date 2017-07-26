@@ -7,7 +7,7 @@
 #include <jansson.h>
 #include <jansson_config.h>
 #include <protocol.h>
-#include<pthread.h> //for threading , link with lpthread
+#include <pthread.h> //for threading , link with lpthread
 #include <signal.h>
 
 
@@ -48,6 +48,11 @@ Server_resource* dns_tun_server_init(int port, int n_listen)
   puts("bind done");
 
   Server_resource *resource = (Server_resource*)malloc(sizeof(Server_resource));
+  if(resource==NULL)
+  {
+    printf("malloc failed\n");
+    return NULL;
+  }
   resource->sock=socket_desc;
 
   listen(resource->sock , n_listen);
@@ -157,6 +162,14 @@ json_t* dnsquery(unsigned char *host , int query_type)
     }
 
     Reply *reply = ( Reply*)malloc(sizeof(Reply)); // not init yet
+
+    if(reply==NULL)
+    {
+      printf("malloc failed\n");
+      return NULL;
+    }
+
+
     memset(reply,0,sizeof(Reply));
 
 
@@ -194,6 +207,13 @@ json_t* dnsquery(unsigned char *host , int query_type)
 
       //  printf("\nrecord %d:\n",k+1); // useful use 'k'
         buf_for_add_in_reply = (char*)malloc(txt_data_len*sizeof(char)+1);
+        if(buf_for_add_in_reply==NULL)
+        {
+          printf("malloc failed\n");
+          return NULL;
+        }
+
+
         memset(buf_for_add_in_reply,0,txt_data_len*sizeof(char)+1);
 
         for(int it = 0; it < txt_data_len;it++) {
@@ -218,6 +238,13 @@ json_t* dnsquery(unsigned char *host , int query_type)
 
         //  printf("\nrecord %d:\n",k+1); // useful use 'k'
           buf_for_add_in_reply = (char*)malloc(16);
+
+          if(buf_for_add_in_reply==NULL)
+          {
+            printf("malloc failed\n");
+            return NULL;
+          }
+
           memset(buf_for_add_in_reply,0,16);
 
 
@@ -263,9 +290,21 @@ int processing(Server_resource *resource)
 
   int N = resource->number_of_threads;
   pthread_t *mas_thread_id=(pthread_t*)malloc(N*sizeof(pthread_t));
+  if(mas_thread_id==NULL)
+  {
+    printf("malloc failed\n");
+    return -1;
+  }
+
   memset(mas_thread_id,0,N*sizeof(pthread_t));
 
   int *new_sock = malloc(sizeof(int));
+  if(new_sock==NULL)
+  {
+    printf("malloc failed\n");
+    return -1;
+  }
+
   *new_sock = resource->sock;
 
   for(int i = 0; i < N ; i++)
@@ -301,6 +340,11 @@ void* function_of_client_service(void *socket_desc)
   json_t* jDNS_reply = NULL;
   char* ToChar = NULL;
   Query *query = ( Query*)malloc(sizeof(Query));
+  if(query==NULL)
+  {
+    printf("malloc failed\n");
+    return 0;
+  }
 
   while(1)
   {
@@ -326,9 +370,10 @@ void* function_of_client_service(void *socket_desc)
       query = jsonformat_to_query(buf_json);
       jDNS_reply = dnsquery(source_name_of_query(query) ,type_of_query(query));
 
+
         if(jDNS_reply==NULL)
         {
-          printf("Error\n");
+          printf("\ndnsquery failed\n");
           goto close_sock;
         }
         ToChar=json_dumps(jDNS_reply,0);

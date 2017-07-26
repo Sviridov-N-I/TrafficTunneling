@@ -74,6 +74,11 @@ Client_resource* dns_tun_client_init(char *server_ip,int port)
   puts("Connected\n");
 
   Client_resource *resource = ( Client_resource*)malloc(sizeof(Client_resource));
+  if(resource==NULL)
+  {
+    printf("malloc failed\n");
+    return NULL;
+  }
   memset(resource, 0, sizeof(Client_resource));
   resource->sock=sock;
   global_resource = resource;
@@ -119,7 +124,11 @@ int generate_dns_query(Client_resource *resource)
         mnemonic_name = extract_str(file_line);
 
         Query *query = ( Query*)malloc(sizeof(Query));
-
+        if(query==NULL)
+        {
+          printf("malloc failed\n");
+          goto close_files;
+        }
 
         if(file_line[0]=='A') // A-record
         {
@@ -130,8 +139,6 @@ int generate_dns_query(Client_resource *resource)
           query_init(query, T_TXT ,mnemonic_name);
 
         }
-        // printf("==->!%s!\n", json_string_value(json_array_get(DNStoTCPquery, 2)));
-        //  ????????    for(int i=0;i<MESSAGE_SIZE;i++) buf_for_transfer[i]='\0';
 
          json_t *json_new_format = query_to_jsonformat(query);
          query_to_char = json_dumps(json_new_format,0);
@@ -147,6 +154,11 @@ int generate_dns_query(Client_resource *resource)
          if( recv(sock , server_reply , 2000 , 0) < 0) {  puts("recv failed"); break; }
 
          json_t* reply_json = json_loads(server_reply,0,NULL);
+         if(reply_json==NULL)
+         {
+           printf("JSON Error\n");
+           goto close_files;
+         }
          Reply*  reply = jsonformat_to_reply(reply_json);
 
          if(reply->current_count==0){
@@ -167,9 +179,6 @@ int generate_dns_query(Client_resource *resource)
            printf(" %s\n", reply_pop_str(reply,i) );
          }
          printf("\n\n");
-
-  //       json_t* newjson = json_loads(query_to_char,0,NULL);
-  //       printf("==->?%s?\n\n\n", json_string_value(json_array_get(newjson, 2)));
       }
       else
       {
@@ -181,7 +190,7 @@ int generate_dns_query(Client_resource *resource)
 
       }
     }
-    fflush(f_out);
+//    fflush(f_out);
 
   }
 

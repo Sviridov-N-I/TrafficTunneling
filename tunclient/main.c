@@ -39,7 +39,6 @@ int main(int argc, char *argv[])
        *ip_address=NULL,//= "127.0.0.5",
        *port=NULL;// = "8888";
 
-//  printf("Source file: !%s!\n",source_file);
 
 
   while ( (rez = getopt(argc,argv,"a:p:s:d:h")) != -1)
@@ -72,6 +71,7 @@ int main(int argc, char *argv[])
 
 
   Client_resource *resource = dns_tun_client_init(ip_address,atoi(port));
+  if(resource==NULL) {return -1;}
   resource->input_file = source_file;
   resource->output_file = destination_file;
 
