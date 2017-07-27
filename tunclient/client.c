@@ -17,32 +17,6 @@ Client_resource *global_resource;
 void handle_ctrl_c(int sig);
 
 
-int find_char(char* str, int n, char s,int startpos)
-{
-  for(int i = startpos; i<n ; i++)
-  {
-    if(str[i]==s) return i;
-    if(str[i]=='\n') return -1;
-  }
-  return -1;
-}
-
-
-char* extract_str(char* str)
-{
-  int k = find_char(str,strlen(str),' ',0)+1;
-  int m = strlen(str)-1; // strlen(str)-2 - last simbol string
-  char* source = (char*)malloc((strlen(str)-1)*sizeof(char));
-  memset(source,0,(strlen(str)-1)*sizeof(char));
-
-  for(int i=0;i<m-k;i++)
-  {
-    source[i]=str[k+i];
-  }
-  return source;
-}
-
-
 
 
 
@@ -114,14 +88,19 @@ int generate_dns_query(Client_resource *resource)
   char *mnemonic_name, *query_to_char;
   char buf_for_transfer[MESSAGE_SIZE];
 
+  char split [10]=", \n";
+  char *istr;
+
   while(!feof(f_in))
   {
     if(fgets(file_line,100,f_in)!=NULL)
     {
-      if((file_line[0]=='A')||((file_line[0]=='T')&&(file_line[1]=='X')&&(file_line[0]=='T')))
+      printf("%s",file_line);
+      istr = strtok (file_line,split); // extract type query
+
+      if(!strcmp(istr,"A") || !strcmp(istr,"TXT")) // if type query A or TXT
       {
-        printf("%s",file_line);
-        mnemonic_name = extract_str(file_line);
+
 
         Query *query = ( Query*)malloc(sizeof(Query));
         if(query==NULL)
@@ -130,13 +109,18 @@ int generate_dns_query(Client_resource *resource)
           goto close_files;
         }
 
-        if(file_line[0]=='A') // A-record
+
+        if(!strcmp(istr,"A")) // A-record
         {
-          query_init(query, T_A ,mnemonic_name);
+          istr = strtok (NULL,split); // extract resource name
+          mnemonic_name = istr;
+          query_init(query, T_A, mnemonic_name);
         }
-        else // TXT-record, because we have only 2 options
+        if(!strcmp(istr,"TXT")) // TXT-record, because we have only 2 options
         {
-          query_init(query, T_TXT ,mnemonic_name);
+          istr = strtok (NULL,split); // extract resource name
+          mnemonic_name = istr;
+          query_init(query, T_TXT, mnemonic_name);
 
         }
 
@@ -179,18 +163,21 @@ int generate_dns_query(Client_resource *resource)
            printf(" %s\n", reply_pop_str(reply,i) );
          }
          printf("\n\n");
+
+
       }
       else
       {
-        mnemonic_name = extract_str(file_line);
-        printf("Error in \"%s\"\n\n",mnemonic_name);
+        istr = strtok (file_line,split);
+
+        printf("Error in \"%s\"\n\n",istr);
         fputs("Invalid string format, \"",f_out);
-        fputs(mnemonic_name,f_out);
+        fputs(istr,f_out);
         fputs("\"\n",f_out);
 
       }
     }
-//    fflush(f_out);
+
 
   }
 
@@ -222,6 +209,6 @@ void dns_tun_client_deinit(Client_resource *resource)
 void handle_ctrl_c(int sig)
 {
   dns_tun_client_deinit(global_resource);
-  printf("\nResources was released\n");
+  printf("\nResources were released\n");
   exit(EXIT_SUCCESS);
 }
