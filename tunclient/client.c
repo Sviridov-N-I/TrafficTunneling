@@ -129,6 +129,8 @@ void* thread_dns_query(void *resource)
   FILE* f_in = thread_resource->input_file_descr;
   FILE* f_out = thread_resource->output_file_descr;
 
+  char *buf_for_strtok_r;
+
   if (connect(sock , (struct sockaddr *)&(thread_resource->server), sizeof(struct sockaddr_in)) < 0)
   {
       perror("connect failed. Error");
@@ -159,7 +161,7 @@ void* thread_dns_query(void *resource)
       memset(res_name,0,READ_FILE_BUF_SIZE);
       strcpy(res_name,file_line);
 
-      istr = strtok (file_line,split); // extract type query
+      istr = strtok_r (file_line,split,&buf_for_strtok_r); // extract type query
 
       if(!strcmp(istr,"A") || !strcmp(istr,"TXT")) // if type query A or TXT
       {
@@ -175,13 +177,13 @@ void* thread_dns_query(void *resource)
 
         if(!strcmp(istr,"A")) // A-record
         {
-          istr = strtok (NULL,split); // extract resource name
+          istr = strtok_r (NULL,split,&buf_for_strtok_r); // extract resource name
           mnemonic_name = istr;
           query_init(query, T_A, mnemonic_name);
         }
         if(!strcmp(istr,"TXT")) // TXT-record, because we have only 2 options
         {
-          istr = strtok (NULL,split); // extract resource name
+          istr = strtok_r (NULL,split,&buf_for_strtok_r); // extract resource name
           mnemonic_name = istr;
           query_init(query, T_TXT, mnemonic_name);
 
@@ -237,7 +239,7 @@ void* thread_dns_query(void *resource)
       }
       else
       {
-        istr = strtok (file_line,split);
+        istr = strtok_r (file_line,split,&buf_for_strtok_r);
         printf("Error in \"%s\"\n\n",istr);
 
         pthread_mutex_lock(&f_write);
@@ -246,7 +248,7 @@ void* thread_dns_query(void *resource)
         fputs(istr,f_out);
         fputs("\"\n",f_out);
 
-        pthread_mutex_lock(&f_write);
+        pthread_mutex_unlock(&f_write);
 
 
       }
