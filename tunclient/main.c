@@ -23,6 +23,7 @@ void print_error()
   printf("*\t-p Port                                                    *\n");
   printf("*\t-s input(source) file                                      *\n");
   printf("*\t-d destination(output) file                                *\n");
+  printf("*\tExample: \"./client -a 127.0.0.1 -p 8888 -s input -d output\"*\n");
   printf("*\tExample: \"./main -a 127.0.0.1 -p 8888 -s input -d output\"  *\n");
   printf("********************************************************************\n\n");
 }

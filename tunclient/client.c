@@ -18,6 +18,7 @@ pthread_mutex_t f_write;
 
 void handle_ctrl_c(int sig);
 
+//#define DEBUG
 
 
 
@@ -45,7 +46,10 @@ Client_resource* dns_tun_client_init(char *server_ip,int port)
         printf("Could not create socket");
         return NULL;
     }
+
+    #ifdef DEBUG
     puts("Socket created");
+    #endif
   }
 
   server.sin_addr.s_addr = inet_addr(server_ip);
@@ -211,7 +215,10 @@ void* thread_dns_query(void *resource)
          Reply*  reply = jsonformat_to_reply(reply_json);
 
          pthread_mutex_lock(&f_write);
+
+         #ifdef DEBUG
          printf("%s",res_name);
+         #endif
 
          if(reply->current_count==0)
          {
@@ -229,9 +236,12 @@ void* thread_dns_query(void *resource)
            fputs(", ",f_out);
            fputs( reply_pop_str(reply,i) , f_out);
            fputs("\n",f_out);
+
+           #ifdef DEBUG
            printf(" %s\n", reply_pop_str(reply,i) );
+           #endif
          }
-         printf("\n\n");
+      //   printf("\n\n");
 
          pthread_mutex_unlock(&f_write);
          fflush(f_out);
@@ -240,7 +250,10 @@ void* thread_dns_query(void *resource)
       else
       {
         istr = strtok_r (file_line,split,&buf_for_strtok_r);
+
+        #ifdef DEBUG
         printf("Error in \"%s\"\n\n",istr);
+        #endif
 
         pthread_mutex_lock(&f_write);
 
