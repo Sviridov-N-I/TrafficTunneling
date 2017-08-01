@@ -148,7 +148,6 @@ void* thread_dns_query(void *resource)
 
   char split [10] = ", \n";
   char *istr;
-
   while(!feof(f_in))
   {
   //  printf("before read\n");
@@ -163,13 +162,14 @@ void* thread_dns_query(void *resource)
     else
     {
       pthread_mutex_unlock(&f_read);
+
     //  printf("after  read\n");
 
       memset(res_name,0,READ_FILE_BUF_SIZE);
       strcpy(res_name,file_line);
 
       istr = strtok_r (file_line,split,&buf_for_strtok_r); // extract type query
-
+      if(istr == NULL) {printf("error format\n");return 0;}
       if(!strcmp(istr,"A") || !strcmp(istr,"TXT")) // if type query A or TXT
       {
 
@@ -185,12 +185,14 @@ void* thread_dns_query(void *resource)
         if(!strcmp(istr,"A")) // A-record
         {
           istr = strtok_r (NULL,split,&buf_for_strtok_r); // extract resource name
+          if(istr == NULL) {printf("error format\n");return 0;}
           mnemonic_name = istr;
           query_init(query, T_A, mnemonic_name);
         }
         if(!strcmp(istr,"TXT")) // TXT-record, because we have only 2 options
         {
           istr = strtok_r (NULL,split,&buf_for_strtok_r); // extract resource name
+          if(istr == NULL) {printf("error format\n");return 0;}
           mnemonic_name = istr;
           query_init(query, T_TXT, mnemonic_name);
 
