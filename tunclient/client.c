@@ -151,16 +151,19 @@ void* thread_dns_query(void *resource)
 
   while(!feof(f_in))
   {
+  //  printf("before read\n");
     pthread_mutex_lock(&f_read);
 
     if(fgets(file_line,100,f_in)==NULL)
     {
       pthread_mutex_unlock(&f_read);
+    //  printf("after read\n");
       return 0;
     }
     else
     {
       pthread_mutex_unlock(&f_read);
+    //  printf("after  read\n");
 
       memset(res_name,0,READ_FILE_BUF_SIZE);
       strcpy(res_name,file_line);
@@ -204,7 +207,10 @@ void* thread_dns_query(void *resource)
          }
 
          char server_reply[2000];
+
          if( recv(sock , server_reply , 2000 , 0) < 0) {  puts("recv failed"); break; }
+
+
 
          json_t* reply_json = json_loads(server_reply,0,NULL);
          if(reply_json==NULL)
@@ -214,6 +220,7 @@ void* thread_dns_query(void *resource)
          }
          Reply*  reply = jsonformat_to_reply(reply_json);
 
+      //   printf("before write\n");
          pthread_mutex_lock(&f_write);
 
          #ifdef DEBUG
@@ -224,14 +231,16 @@ void* thread_dns_query(void *resource)
          {
            if(type_of_reply(reply)==T_A)  fputs("A, ",f_out);
            if(type_of_reply(reply)==T_TXT)  fputs("TXT, ",f_out);
+
            fputs(mnemonic_name,f_out);
-           fputs(", infromation not found\n",f_out);
+           fputs(", information not found\n",f_out);
          }
 
          for(int i = 0;i<reply->current_count;i++)
          {
            if(type_of_reply(reply)==T_A)  fputs("A, ",f_out);
            if(type_of_reply(reply)==T_TXT)  fputs("TXT, ",f_out);
+
            fputs(mnemonic_name,f_out);
            fputs(", ",f_out);
            fputs( reply_pop_str(reply,i) , f_out);
@@ -244,6 +253,7 @@ void* thread_dns_query(void *resource)
       //   printf("\n\n");
 
          pthread_mutex_unlock(&f_write);
+      //   printf("after write\n");
          fflush(f_out);
 
       }

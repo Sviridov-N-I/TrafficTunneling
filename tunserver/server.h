@@ -14,7 +14,7 @@
 
 Server_resource* dns_tun_server_init(int port,int n_listen);
 
-Server_resource* dns_tun_server_deinit(Server_resource *resource);
+void dns_tun_server_deinit(Server_resource *resource);
 
 void set_number_of_threads(Server_resource *resource, int n);
 

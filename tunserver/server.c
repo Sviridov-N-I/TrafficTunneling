@@ -27,13 +27,15 @@ Server_resource* dns_tun_server_init(int port, int n_listen)
   (void)signal(SIGINT, handle_ctrl_c); // signal recording
 
 
-  socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+  socket_desc = socket(AF_INET , SOCK_STREAM , 0); //SO_REUSEADDR);
   if (socket_desc == -1)
   {
       printf("Could not create socket");
       return NULL;
   }
+  #ifdef DEBUG
   puts("Socket created");
+  #endif
 
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = INADDR_ANY;
@@ -45,7 +47,10 @@ Server_resource* dns_tun_server_init(int port, int n_listen)
       close(socket_desc);
       return NULL;
   }
+
+  #ifdef DEBUG
   puts("bind done");
+  #endif
 
   Server_resource *resource = (Server_resource*)malloc(sizeof(Server_resource));
   if(resource==NULL)
@@ -62,9 +67,15 @@ Server_resource* dns_tun_server_init(int port, int n_listen)
 }
 
 
-Server_resource* dns_tun_server_deinit(Server_resource *resource)
+void dns_tun_server_deinit(Server_resource *resource)
 {
+  if(resource==NULL) { return; }
   close(resource->sock);
+/*  if(resource->mas_sock != NULL)
+  {
+    for(int i=0;i<N_THREADS;i++) { close(resource->mas_sock[i]); }
+  //  free(resource->mas_sock);
+}*/
   free(resource);
 }
 
@@ -216,12 +227,18 @@ json_t* dnsquery(unsigned char *host , int query_type)
 
         memset(buf_for_add_in_reply,0,txt_data_len*sizeof(char)+1);
 
-        for(int it = 0; it < txt_data_len;it++) {
+        for(int it = 0; it < txt_data_len;it++)
+        {
+          #ifdef DEBUG
           printf("%c", buf[cnt_extract_rec + it]);
+          #endif
           buf_for_add_in_reply[it]=buf[cnt_extract_rec + it];
         }
         reply_add_str(reply,buf_for_add_in_reply);
+
+        #ifdef DEBUG
         printf("\n");
+        #endif
 
         cnt_extract_rec+=txt_data_len;
       }
@@ -253,11 +270,14 @@ json_t* dnsquery(unsigned char *host , int query_type)
                                       buf[cnt_extract_rec + 1],
                                       buf[cnt_extract_rec + 2],
                                       buf[cnt_extract_rec + 3]);
+          #ifdef DEBUG
           for(; it < size_ip-1;it++)
           {
             printf("%d.", buf[cnt_extract_rec + it]);
           }
+
           printf("%d\n", buf[cnt_extract_rec + it]);
+          #endif
         //  printf("\n%s\n", buf_for_add_in_reply);
           reply_add_str(reply,buf_for_add_in_reply);
           cnt_extract_rec+=size_ip;
@@ -267,9 +287,9 @@ json_t* dnsquery(unsigned char *host , int query_type)
         // message about error
       }
     }
-    printf("\n");
+  //  printf("\n");
 
-
+    reply->Type = query_type;
     return reply_to_jsonformat(reply);
 
 }
@@ -332,6 +352,8 @@ void* function_of_client_service(void *socket_desc)
 {
   int sock = *(int*)socket_desc;
 
+
+
   int  client_sock , c , read_size;
   struct sockaddr_in client;
   char client_message[BUL_LEN];
@@ -348,14 +370,20 @@ void* function_of_client_service(void *socket_desc)
 
   while(1)
   {
+    #ifdef DEBUG
     puts("Waiting for incoming connections...\n");
+    #endif
+
     c = sizeof(struct sockaddr_in);
 
     client_sock = accept(sock, (struct sockaddr *)&client, (socklen_t*)&c);
     if (client_sock < 0)
     {
         perror("accept failed");
-      //  goto close_sock;
+    //    close(client_sock);
+        dns_tun_server_deinit(global_resource);
+        exit(EXIT_FAILURE);
+        //  goto close_sock;
     }
 
     while( (read_size = recv(client_sock , client_message , BUL_LEN , 0)) > 0 )
@@ -368,7 +396,9 @@ void* function_of_client_service(void *socket_desc)
         goto close_sock;
       }
       query = jsonformat_to_query(buf_json);
+    //  printf("sourse: %s\t before query\n",source_name_of_query(query));
       jDNS_reply = dnsquery(source_name_of_query(query) ,type_of_query(query));
+    //  printf("sourse: %s\t after query\n\n\n",source_name_of_query(query));
 
 
         if(jDNS_reply==NULL)
@@ -380,6 +410,7 @@ void* function_of_client_service(void *socket_desc)
         strcpy(client_message,ToChar);
 
         write(client_sock , client_message , BUL_LEN);
+
         free(buf_json);
         strcpy(client_message,"");
         memset(client_message,0,BUL_LEN); // for(int it=0;it<BUL_LEN;it++){ client_message[it]='\0'; }
@@ -388,7 +419,10 @@ void* function_of_client_service(void *socket_desc)
 
       if(read_size == 0)
       {
+          #ifdef DEBUG
           puts("Client disconnected\n\n\n");
+          close(client_sock);
+          #endif
       }
       else if(read_size == -1)
       {

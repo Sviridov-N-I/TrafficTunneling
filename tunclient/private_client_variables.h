@@ -8,7 +8,7 @@
 #define T_A 1
 #define T_TXT 16
 
-#define N_THREADS 40
+#define N_THREADS 10
 
 
 typedef struct Client_resource
