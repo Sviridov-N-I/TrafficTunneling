@@ -6,6 +6,8 @@
 #define BUFSIZE 65536
 #define BUL_LEN 2000
 
+#define N_THREADS 500
+
 
 typedef struct Server_resource
 {
